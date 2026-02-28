@@ -11,7 +11,7 @@ export const WelcomeScreen = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { sessionToken, setCoupleData } = useCouple();
+    const { sessionToken, setCoupleData, refreshSession } = useCouple();
     const createCouple = useMutation(api.couples.createCouple);
     const joinCouple = useMutation(api.couples.joinCouple);
 
@@ -22,7 +22,14 @@ export const WelcomeScreen = () => {
             const result = await createCouple({ sessionToken: sessionToken! });
             setCoupleData(result.coupleId, 'A', result.inviteCode);
         } catch (e: any) {
-            setError(e.message || 'Something went wrong');
+            console.error('[Bridge] createCouple failed:', e);
+            // Auto-recover from stale/invalid session tokens
+            if (e.message?.toLowerCase().includes('session token')) {
+                refreshSession();
+                setError('Session refreshed — please try again.');
+            } else {
+                setError(e.message || 'Something went wrong');
+            }
         }
         setLoading(false);
     };
@@ -38,7 +45,12 @@ export const WelcomeScreen = () => {
             });
             setCoupleData(result.coupleId, 'B');
         } catch (e: any) {
-            setError(e.message || 'Invalid invite code');
+            if (e.message?.toLowerCase().includes('session token')) {
+                refreshSession();
+                setError('Session refreshed — please try again.');
+            } else {
+                setError(e.message || 'Invalid invite code');
+            }
         }
         setLoading(false);
     };
@@ -92,6 +104,17 @@ export const WelcomeScreen = () => {
                             </p>
                         </div>
 
+                        {/* Error display */}
+                        {error && (
+                            <motion.p
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-hearth-clay text-xs text-center"
+                            >
+                                {error}
+                            </motion.p>
+                        )}
+
                         {/* Actions */}
                         <div className="flex flex-col gap-4 w-full">
                             <button
@@ -99,8 +122,21 @@ export const WelcomeScreen = () => {
                                 disabled={loading}
                                 className="w-full py-4 rounded-2xl bg-hearth-clay text-hearth-paper font-sans text-sm tracking-widest uppercase hover:bg-hearth-clay/80 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
                             >
-                                <Sparkles size={16} />
-                                Begin a Journey
+                                {loading ? (
+                                    <>
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                            className="w-4 h-4 border-2 border-hearth-paper/30 border-t-hearth-paper rounded-full"
+                                        />
+                                        Starting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={16} />
+                                        Begin a Journey
+                                    </>
+                                )}
                             </button>
                             <button
                                 onClick={() => setMode('join')}

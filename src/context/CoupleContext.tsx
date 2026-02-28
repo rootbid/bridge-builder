@@ -13,6 +13,7 @@ interface CoupleState {
 interface CoupleContextValue extends CoupleState {
     setCoupleData: (coupleId: string, partnerRole: 'A' | 'B', inviteCode?: string) => void;
     clearCoupleData: () => void;
+    refreshSession: () => void;
 }
 
 const STORAGE_KEY = 'bridge-builder-couple';
@@ -57,9 +58,9 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
                     return nextState;
                 });
-            }).catch(console.error).finally(() => {
-                // Keep it true so it doesn't double-fire in StrictMode during the same mount phase
-                // If it failed, we could set it to false to allow retries, but for a simple token gen it's usually fine
+            }).catch((err) => {
+                console.error('[Bridge] Session creation failed:', err);
+                fetchingSessionRef.current = false; // Allow retry
             });
         }
     }, [state.sessionToken, createSession]);
@@ -91,13 +92,23 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         }));
     };
 
+    // Force-refresh the session token (e.g. when the backend says it's invalid/expired)
+    const refreshSession = () => {
+        fetchingSessionRef.current = false;
+        setState(prev => {
+            const nextState = { ...prev, sessionToken: null, coupleId: null, partnerRole: null, isOnboarded: false, inviteCode: null };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+            return nextState;
+        });
+    };
+
     // If we're still waiting for a native session token, render nothing to avoid unauth requests
     if (!state.sessionToken) {
         return null;
     }
 
     return (
-        <CoupleContext.Provider value={{ ...state, setCoupleData, clearCoupleData }}>
+        <CoupleContext.Provider value={{ ...state, setCoupleData, clearCoupleData, refreshSession }}>
             {children}
         </CoupleContext.Provider>
     );
