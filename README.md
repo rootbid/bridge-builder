@@ -14,9 +14,6 @@ Two people. One question. Two honest answers. A bridge built between them.
 
 The Bridge Builder is a relationship tool that helps couples confront the friction points in their relationship through structured vulnerability and AI-generated micro-actions.
 
-<div align="center">
-<img src="docs/bridge-guide.jpg" alt="Bridge Builder - How it works" width="400" />
-</div>
 
 ## How It Works
 
