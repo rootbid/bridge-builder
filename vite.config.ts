@@ -4,6 +4,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: '/bridge-builder/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
