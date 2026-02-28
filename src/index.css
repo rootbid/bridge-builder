@@ -1,0 +1,288 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Core Hearth Palette ── */
+  --color-hearth-dark: #1A1616;
+  --color-hearth-paper: #F2E8DA;
+  --color-hearth-clay: #D95D39;
+  --color-hearth-stone: #3D3535;
+
+  /* ── Extended Palette ── */
+  --color-hearth-ember: #E8956A;
+  --color-hearth-glow: #F4C67A;
+  --color-hearth-mist: #A89B91;
+  --color-hearth-deep: #120F0F;
+  --color-hearth-blush: #C4786A;
+  --color-hearth-sage: #7A8B6F;
+
+  /* ── Typography ── */
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  /* ── Animations ── */
+  --animate-heartbeat: heartbeat 2s ease-in-out infinite;
+  --animate-reveal: reveal 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-breathe: breathe 4s ease-in-out infinite;
+  --animate-typing-pulse: typing-pulse 1.4s ease-in-out infinite;
+  --animate-glow-ring: glow-ring 2s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-gift-reveal: gift-reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  --animate-shimmer: shimmer 3s ease-in-out infinite;
+
+  /* ── Heartbeat ── */
+  @keyframes heartbeat {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+
+    50% {
+      transform: scale(1.05);
+      opacity: 1;
+    }
+  }
+
+  /* ── Answer Reveal (blur to clarity) ── */
+  @keyframes reveal {
+    0% {
+      filter: blur(10px);
+      opacity: 0;
+    }
+
+    100% {
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  /* ── Breathe (for Reset — deep breath pulsation) ── */
+  @keyframes breathe {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.7;
+    }
+
+    50% {
+      transform: scale(1.08);
+      opacity: 1;
+    }
+  }
+
+  /* ── Typing Pulse (heart-throb when partner types) ── */
+  @keyframes typing-pulse {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+
+    30% {
+      transform: scale(1.15);
+      opacity: 1;
+    }
+
+    60% {
+      transform: scale(0.95);
+      opacity: 0.7;
+    }
+  }
+
+  /* ── Glow Ring (sync-lock reset circle aura) ── */
+  @keyframes glow-ring {
+
+    0%,
+    100% {
+      box-shadow: 0 0 20px rgba(217, 93, 57, 0.1);
+    }
+
+    50% {
+      box-shadow: 0 0 40px rgba(217, 93, 57, 0.35);
+    }
+  }
+
+  /* ── Floating Particles ── */
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+
+    33% {
+      transform: translateY(-15px) rotate(2deg);
+    }
+
+    66% {
+      transform: translateY(5px) rotate(-1deg);
+    }
+  }
+
+  /* ── Gift Reveal (opening a gift — blur+scale) ── */
+  @keyframes gift-reveal {
+    0% {
+      filter: blur(20px);
+      opacity: 0;
+      transform: scale(0.85);
+    }
+
+    60% {
+      filter: blur(3px);
+      opacity: 0.8;
+      transform: scale(1.03);
+    }
+
+    100% {
+      filter: blur(0);
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* ── Fade Up Entrance ── */
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Shimmer (subtle light sweep) ── */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
+    }
+
+    100% {
+      background-position: 200% center;
+    }
+  }
+}
+
+/* ── Global Styles ── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: var(--color-hearth-dark);
+  color: var(--color-hearth-paper);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar: invisible but functional ── */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+/* ── Selection styling ── */
+::selection {
+  background-color: rgba(217, 93, 57, 0.25);
+  color: var(--color-hearth-paper);
+}
+
+/* ── Focus styles ── */
+:focus-visible {
+  outline: 2px solid rgba(217, 93, 57, 0.4);
+  outline-offset: 4px;
+}
+
+input:focus,
+textarea:focus,
+input:focus-visible,
+textarea:focus-visible {
+  outline: none !important;
+}
+
+/* ── Glassmorphism utility classes ── */
+
+.glass {
+  background: rgba(61, 53, 53, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(242, 232, 218, 0.08);
+}
+
+.glass-warm {
+  background: rgba(217, 93, 57, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(217, 93, 57, 0.15);
+}
+
+.glass-deep {
+  background: rgba(18, 15, 15, 0.6);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(242, 232, 218, 0.05);
+}
+
+/* ── Grain Texture Overlay (for intimacy) ── */
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* ── Gradient borders ── */
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(217, 93, 57, 0.4), rgba(244, 198, 122, 0.2), rgba(217, 93, 57, 0.1));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Safe area for mobile notch ── */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
