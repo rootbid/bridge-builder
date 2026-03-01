@@ -68,12 +68,8 @@ export const RoundView = () => {
     }).catch(console.error);
   }, []);
 
-  // Rate limit query — only load when user is in revealing state (about to need it)
-  const isInRevealingState = latestRound?.status === 'revealing';
-  const rateLimit = useQuery(
-    api.rateLimits.checkLimit,
-    deviceFingerprint && isInRevealingState ? { fingerprint: deviceFingerprint } : 'skip'
-  );
+  // Rate limit is enforced entirely on the backend in analyzeBridge.
+  // Removed unused frontend rateLimit query to save bandwidth.
 
   // Pair the machine on mount
   useEffect(() => {
@@ -224,11 +220,15 @@ export const RoundView = () => {
   useEffect(() => {
     if (!sessionToken) return;
     const heartbeat = setInterval(() => {
-      setTypingMutation({
-        coupleId: typedCoupleId,
-        sessionToken,
-        isTyping: false,
-      });
+      // ONLY send heartbeat if the tab is visible to the user
+      // This prevents background tabs from DDOSing the database
+      if (document.visibilityState === 'visible') {
+        setTypingMutation({
+          coupleId: typedCoupleId,
+          sessionToken,
+          isTyping: false,
+        });
+      }
     }, 15000);
     return () => clearInterval(heartbeat);
   }, [typedCoupleId, sessionToken, setTypingMutation]);
@@ -262,7 +262,12 @@ export const RoundView = () => {
       questionText: proposedQuestion.text,
       questionCategory: proposedQuestion.category,
       sessionToken: sessionToken,
-    }).catch(err => console.error('[Bridge] startRound failed:', err));
+    }).catch(err => {
+      console.error('[Bridge] startRound failed:', err);
+      alert("Failed to start crossing: " + err.message);
+      // Force resync since optimistic update failed
+      window.location.reload();
+    });
   };
 
   const handleStartCustom = async () => {
@@ -278,7 +283,12 @@ export const RoundView = () => {
       questionText: questionText,
       questionCategory: 'Custom',
       sessionToken: sessionToken!,
-    }).catch(err => console.error('[Bridge] startRound failed:', err));
+    }).catch(err => {
+      console.error('[Bridge] startRound failed:', err);
+      // Revert optimistic clear so user doesn't lose their typed custom question
+      setCustomQuestion(questionText);
+      alert("Failed to start crossing: " + err.message);
+    });
   };
 
   const handleSubmit = () => {
@@ -293,7 +303,13 @@ export const RoundView = () => {
         roundId: latestRound._id,
         sessionToken,
         answer,
-      }).catch(err => console.error('[Bridge] submitAnswer failed:', err));
+      }).catch(err => {
+        console.error('[Bridge] submitAnswer failed:', err);
+        // Revert optimistic update
+        setInputText(answer);
+        alert("Failed to submit your truth: " + err.message);
+        window.location.reload(); // Force machine re-sync
+      });
     }
   };
 
@@ -307,7 +323,11 @@ export const RoundView = () => {
       send({ type: 'REVEAL', partnerAnswer: pAnswer });
       // Fire mutation in background
       revealAnswersMutation({ roundId: latestRound._id, sessionToken })
-        .catch(err => console.error('[Bridge] revealAnswers failed:', err));
+        .catch(err => {
+          console.error('[Bridge] revealAnswers failed:', err);
+          setIsRevealing(false);
+          alert("Failed to reveal answers: " + err.message);
+        });
     }
   };
 
@@ -337,7 +357,7 @@ export const RoundView = () => {
     if (latestRound && sessionToken) {
       // Fire-and-forget — Convex subscription will sync completion state
       completeBridgeTaskMutation({ roundId: latestRound._id, sessionToken })
-        .catch(err => console.error('[Bridge] completeTask failed:', err));
+        .catch(err => alert("Failed to mark task complete: " + err.message));
     }
   };
 
@@ -358,12 +378,11 @@ export const RoundView = () => {
   const handleReCross = (roundId: string) => {
     setShowHistory(false);
     if (sessionToken) {
-      // Fire-and-forget — Convex subscription will auto-sync the new round
       reCrossRoundMutation({
         coupleId: typedCoupleId,
         originalRoundId: roundId as Id<'rounds'>,
         sessionToken,
-      }).catch(err => console.error('[Bridge] reCross failed:', err));
+      }).catch(err => alert("Failed to re-cross bridge: " + err.message));
     }
   };
 
