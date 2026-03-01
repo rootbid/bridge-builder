@@ -6,7 +6,7 @@ import { defineConfig } from 'vite';
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
-  base: '/bridge-builder/',
+  base: (process.env.CF_PAGES || process.env.GITHUB_ACTIONS) ? '/' : '/bridge-builder/',
   plugins: [react(), tailwindcss(), cloudflare()],
   resolve: {
     alias: {

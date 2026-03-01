@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { CheckCircle2, Lightbulb, Circle, Clock, Heart, HeartCrack, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BridgeTaskCardProps {
+    observation?: string;
     taskA: string;
     taskB: string;
     insight: string;
@@ -14,7 +15,7 @@ interface BridgeTaskCardProps {
     onComplete: () => void;
 }
 
-export const BridgeTaskCard = ({ taskA, taskB, insight, partnerRole, myTaskCompleted, partnerTaskCompleted, myFeedback, onFeedback, onComplete }: BridgeTaskCardProps) => {
+export const BridgeTaskCard = ({ observation, taskA, taskB, insight, partnerRole, myTaskCompleted, partnerTaskCompleted, myFeedback, onFeedback, onComplete }: BridgeTaskCardProps) => {
     const myTask = partnerRole === 'A' ? taskA : taskB;
     const theirTask = partnerRole === 'A' ? taskB : taskA;
 
@@ -96,15 +97,17 @@ export const BridgeTaskCard = ({ taskA, taskB, insight, partnerRole, myTaskCompl
                         </div>
                     )}
 
-                    {/* Insight */}
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-hearth-paper/60 text-sm italic leading-relaxed border-l-2 border-hearth-clay/30 pl-4"
-                    >
-                        {insight}
-                    </motion.p>
+                    {/* Observation */}
+                    {observation && (
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-hearth-paper/80 text-sm leading-relaxed border-l-2 border-hearth-clay/30 pl-4"
+                        >
+                            {observation}
+                        </motion.p>
+                    )}
 
                     {/* Tasks */}
                     <div className="space-y-4">
@@ -176,6 +179,18 @@ export const BridgeTaskCard = ({ taskA, taskB, insight, partnerRole, myTaskCompl
                             </div>
                         </motion.div>
                     </div>
+
+                    {/* Final Insight / Synthesis */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8 }}
+                        className="text-center px-4 py-2"
+                    >
+                        <p className="text-hearth-glow/90 font-serif italic text-sm text-balance">
+                            "{insight}"
+                        </p>
+                    </motion.div>
 
                     {/* Cross Together Button */}
                     <motion.button

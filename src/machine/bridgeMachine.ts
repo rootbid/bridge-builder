@@ -12,6 +12,7 @@ export interface BridgeContext {
   partnerSubmitted: boolean;
   partnerTyping: boolean;
   bridgeTask: {
+    observation?: string;
     taskA: string;
     taskB: string;
     insight: string;
@@ -26,7 +27,7 @@ export type BridgeEvent =
   | { type: 'PARTNER_TYPING'; isTyping: boolean }
   | { type: 'SYNC_STATE'; myAnswer: string | null; partnerSubmitted: boolean; partnerAnswer: string | null; status?: string }
   | { type: 'REVEAL'; partnerAnswer: string }
-  | { type: 'BRIDGE_TASK_READY'; taskA: string; taskB: string; insight: string }
+  | { type: 'BRIDGE_TASK_READY'; observation?: string; taskA: string; taskB: string; insight: string }
   | { type: 'COMPLETE' }
   | { type: 'NEW_ROUND' }
   | { type: 'RESET' }
@@ -82,7 +83,7 @@ export const bridgeMachine = setup({
     setBridgeTask: assign({
       bridgeTask: ({ event }) =>
         event.type === 'BRIDGE_TASK_READY'
-          ? { taskA: event.taskA, taskB: event.taskB, insight: event.insight }
+          ? { observation: event.observation, taskA: event.taskA, taskB: event.taskB, insight: event.insight }
           : null,
     }),
     syncState: assign({
