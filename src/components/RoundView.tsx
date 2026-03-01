@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useMachine } from '@xstate/react';
 import { bridgeMachine } from '../machine/bridgeMachine';
 import { AnswerCard } from './AnswerCard';
@@ -6,9 +6,7 @@ import { BridgeTaskCard } from './BridgeTaskCard';
 import { QuestionDisplay } from './QuestionDisplay';
 import { StatusIndicator } from './StatusIndicator';
 import { TypingPulse } from './TypingPulse';
-import { RoundHistory } from './RoundHistory';
 import { JourneyButton } from './JourneyButton';
-import { UserGuide } from './UserGuide';
 import { getRandomQuestion, HIGH_FRICTION_QUESTIONS, type Question } from '../data/questions';
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo, animate } from 'framer-motion';
 import { Send, RefreshCw, BookOpen, LogOut, Compass, Eye, Footprints, PenLine, HelpCircle, Share2, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -17,6 +15,10 @@ import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 import { useCouple } from '../context/CoupleContext';
 import { getDeviceFingerprint } from '../utils/fingerprint';
+
+// Lazy-load heavy overlay components for faster initial load
+const RoundHistory = lazy(() => import('./RoundHistory').then(m => ({ default: m.RoundHistory })));
+const UserGuide = lazy(() => import('./UserGuide').then(m => ({ default: m.UserGuide })));
 
 export const RoundView = () => {
   const { coupleId, partnerRole, sessionToken, inviteCode, clearCoupleData } = useCouple();
@@ -35,13 +37,16 @@ export const RoundView = () => {
   const [proposedQuestion, setProposedQuestion] = useState<Question | null>(null);
   const dragX = useMotionValue(0);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingSentRef = useRef<number>(0);
 
   const typedCoupleId = coupleId as Id<'couples'>;
 
   // Convex Hooks
   const latestRound = useQuery(api.rounds.getLatestRound, sessionToken ? { coupleId: typedCoupleId, sessionToken } : 'skip');
   const roundHistory = useQuery(api.rounds.getHistory, sessionToken ? { coupleId: typedCoupleId, sessionToken } : 'skip');
-  const usedQuestionIds = useQuery(api.rounds.getUsedQuestionIds, sessionToken ? { coupleId: typedCoupleId, sessionToken } : 'skip');
+  // Derive usedQuestionIds from roundHistory instead of a separate query
+  const usedQuestionIds = roundHistory?.slice(0, 10).map(r => r.questionId) ?? undefined;
   const partnerPresence = useQuery(api.presence.getPartnerPresence, sessionToken ? {
     coupleId: typedCoupleId,
     sessionToken,
@@ -63,10 +68,11 @@ export const RoundView = () => {
     }).catch(console.error);
   }, []);
 
-  // Rate limit query
+  // Rate limit query — only load when user is in revealing state (about to need it)
+  const isInRevealingState = latestRound?.status === 'revealing';
   const rateLimit = useQuery(
     api.rateLimits.checkLimit,
-    deviceFingerprint ? { fingerprint: deviceFingerprint } : 'skip'
+    deviceFingerprint && isInRevealingState ? { fingerprint: deviceFingerprint } : 'skip'
   );
 
   // Pair the machine on mount
@@ -187,17 +193,22 @@ export const RoundView = () => {
     }
   }, [latestRound, send, partnerRole, state, showReflection]);
 
-  // Typing presence
+  // Typing presence — debounced to fire at most once per 500ms
   const handleTyping = useCallback((text: string) => {
     setInputText(text);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     if (sessionToken) {
-      setTypingMutation({
-        coupleId: typedCoupleId,
-        sessionToken,
-        isTyping: true,
-      });
+      const now = Date.now();
+      // Only send "start typing" if 500ms has passed since last send
+      if (now - lastTypingSentRef.current > 500) {
+        lastTypingSentRef.current = now;
+        setTypingMutation({
+          coupleId: typedCoupleId,
+          sessionToken,
+          isTyping: true,
+        });
+      }
 
       typingTimeoutRef.current = setTimeout(() => {
         setTypingMutation({
@@ -207,6 +218,19 @@ export const RoundView = () => {
         });
       }, 2000);
     }
+  }, [typedCoupleId, sessionToken, setTypingMutation]);
+
+  // Presence heartbeat — keeps lastSeen fresh even when not typing
+  useEffect(() => {
+    if (!sessionToken) return;
+    const heartbeat = setInterval(() => {
+      setTypingMutation({
+        coupleId: typedCoupleId,
+        sessionToken,
+        isTyping: false,
+      });
+    }, 15000);
+    return () => clearInterval(heartbeat);
   }, [typedCoupleId, sessionToken, setTypingMutation]);
 
   useEffect(() => {
@@ -230,54 +254,60 @@ export const RoundView = () => {
 
   const handleStartProposed = async () => {
     if (!proposedQuestion || !sessionToken) return;
-    const roundId = await startRoundMutation({
+    // Optimistic: start mutation in background, don't block UI
+    // The Convex subscription will sync the real roundId
+    startRoundMutation({
       coupleId: typedCoupleId,
       questionId: proposedQuestion.id,
       questionText: proposedQuestion.text,
       questionCategory: proposedQuestion.category,
       sessionToken: sessionToken,
-    });
-    const count = (roundHistory?.length || 0) + 1;
-    send({ type: 'START', roundId, roundNumber: count, question: proposedQuestion.text, questionCategory: proposedQuestion.category });
+    }).catch(err => console.error('[Bridge] startRound failed:', err));
   };
 
   const handleStartCustom = async () => {
     if (!customQuestion.trim()) return;
     const customId = 'custom_' + Date.now().toString(36);
-    const roundId = await startRoundMutation({
-      coupleId: typedCoupleId,
-      questionId: customId,
-      questionText: customQuestion.trim(),
-      questionCategory: 'Custom',
-      sessionToken: sessionToken!,
-    });
-    const count = (roundHistory?.length || 0) + 1;
-    send({ type: 'START', roundId, roundNumber: count, question: customQuestion.trim(), questionCategory: 'Custom' });
+    const questionText = customQuestion.trim();
+    // Optimistic: clear input immediately, let Convex subscription sync the round
     setCustomQuestion('');
     setQuestionMode('discover');
+    startRoundMutation({
+      coupleId: typedCoupleId,
+      questionId: customId,
+      questionText: questionText,
+      questionCategory: 'Custom',
+      sessionToken: sessionToken!,
+    }).catch(err => console.error('[Bridge] startRound failed:', err));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (inputText.trim() && latestRound && sessionToken) {
+      const answer = inputText;
+      // Optimistic: update local state instantly
+      send({ type: 'SUBMIT_ANSWER', answer });
+      setInputText('');
+      // Fire mutations in background
       setTypingMutation({ coupleId: typedCoupleId, sessionToken, isTyping: false });
-      await submitAnswerMutation({
+      submitAnswerMutation({
         roundId: latestRound._id,
         sessionToken,
-        answer: inputText,
-      });
-      send({ type: 'SUBMIT_ANSWER', answer: inputText });
-      setInputText('');
+        answer,
+      }).catch(err => console.error('[Bridge] submitAnswer failed:', err));
     }
   };
 
-  const handleReveal = async () => {
+  const handleReveal = () => {
     if (latestRound && sessionToken) {
-      await revealAnswersMutation({ roundId: latestRound._id, sessionToken });
+      // Optimistic: reveal immediately
       setIsRevealing(true);
       const pAnswer = partnerRole === 'A'
         ? (latestRound.partnerBAnswer || '')
         : (latestRound.partnerAAnswer || '');
       send({ type: 'REVEAL', partnerAnswer: pAnswer });
+      // Fire mutation in background
+      revealAnswersMutation({ roundId: latestRound._id, sessionToken })
+        .catch(err => console.error('[Bridge] revealAnswers failed:', err));
     }
   };
 
@@ -303,9 +333,11 @@ export const RoundView = () => {
     }
   };
 
-  const handleCompleteTask = async () => {
+  const handleCompleteTask = () => {
     if (latestRound && sessionToken) {
-      await completeBridgeTaskMutation({ roundId: latestRound._id, sessionToken });
+      // Fire-and-forget — Convex subscription will sync completion state
+      completeBridgeTaskMutation({ roundId: latestRound._id, sessionToken })
+        .catch(err => console.error('[Bridge] completeTask failed:', err));
     }
   };
 
@@ -323,16 +355,16 @@ export const RoundView = () => {
     setIsGenerating(false);
   };
 
-  const handleReCross = async (roundId: string) => {
+  const handleReCross = (roundId: string) => {
     setShowHistory(false);
     if (sessionToken) {
-      await reCrossRoundMutation({
+      // Fire-and-forget — Convex subscription will auto-sync the new round
+      reCrossRoundMutation({
         coupleId: typedCoupleId,
         originalRoundId: roundId as Id<'rounds'>,
         sessionToken,
-      });
+      }).catch(err => console.error('[Bridge] reCross failed:', err));
     }
-    // The Convex subscription will auto-sync the new round
   };
 
   const mySubmitted = partnerRole === 'A'
@@ -409,15 +441,15 @@ export const RoundView = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col gap-6 mt-4">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {/* ── Idle / Ready to Discover ── */}
           {(!latestRound || latestRound.status === 'completed') && !showReflection && (
             <motion.div
               key="idle"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
               className="flex flex-col items-center justify-center flex-1 gap-8"
             >
               <div className="text-center space-y-4">
@@ -545,10 +577,10 @@ export const RoundView = () => {
           {showReflection && (
             <motion.div
               key="reflection"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.35 }}
               className="flex flex-col items-center justify-center flex-1 gap-10"
             >
               <motion.div
@@ -753,17 +785,21 @@ export const RoundView = () => {
       {/* Overlays */}
       <AnimatePresence>
         {showHistory && (
-          <RoundHistory
-            rounds={(roundHistory || []) as any}
-            onClose={() => setShowHistory(false)}
-            onReCross={handleReCross}
-          />
+          <Suspense fallback={null}>
+            <RoundHistory
+              rounds={(roundHistory || []) as any}
+              onClose={() => setShowHistory(false)}
+              onReCross={handleReCross}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {showGuide && (
-          <UserGuide onClose={() => setShowGuide(false)} />
+          <Suspense fallback={null}>
+            <UserGuide onClose={() => setShowGuide(false)} />
+          </Suspense>
         )}
       </AnimatePresence>
     </div>
