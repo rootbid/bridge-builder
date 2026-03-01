@@ -190,19 +190,21 @@ export const revealAnswers = mutation({
 export const setBridgeTask = internalMutation({
   args: {
     roundId: v.id("rounds"),
+    observation: v.string(),
     taskA: v.string(),
     taskB: v.string(),
     insight: v.string(),
   },
   handler: async (ctx, args) => {
     // MED-1: Validate AI output lengths
-    if (args.taskA.length > 2000 || args.taskB.length > 2000 || args.insight.length > 2000) {
+    if (args.observation.length > 2000 || args.taskA.length > 2000 || args.taskB.length > 2000 || args.insight.length > 2000) {
       throw new Error("Bridge task content too long");
     }
 
     await ctx.db.patch(args.roundId, {
       status: "bridging",
       bridgeTask: {
+        observation: args.observation,
         taskA: args.taskA,
         taskB: args.taskB,
         insight: args.insight,

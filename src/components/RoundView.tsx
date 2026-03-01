@@ -176,6 +176,7 @@ export const RoundView = () => {
         setIsGenerating(false);
         send({
           type: 'BRIDGE_TASK_READY',
+          observation: latestRound.bridgeTask.observation,
           taskA: latestRound.bridgeTask.taskA,
           taskB: latestRound.bridgeTask.taskB,
           insight: latestRound.bridgeTask.insight,
@@ -733,6 +734,7 @@ export const RoundView = () => {
               {latestRound.status === 'bridging' && latestRound.bridgeTask && (
                 <div className="mt-4">
                   <BridgeTaskCard
+                    observation={latestRound.bridgeTask.observation}
                     taskA={latestRound.bridgeTask.taskA}
                     taskB={latestRound.bridgeTask.taskB}
                     insight={latestRound.bridgeTask.insight}
