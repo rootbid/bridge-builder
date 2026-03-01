@@ -7,12 +7,12 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "preview": "npm run build && wrangler dev",
+    "preview": "CF_PAGES=true npm run build && wrangler dev",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "CF_PAGES=true npm run build && wrangler deploy"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
