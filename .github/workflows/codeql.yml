@@ -1,0 +1,51 @@
+name: "CodeQL Security Analysis"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Run weekly for catching newly discovered vulnerability patterns
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 6:00 UTC
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze JavaScript/TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: .github/codeql/codeql-config.yml
+          # Use the security-extended suite for deeper analysis
+          queries: +security-extended,security-and-quality
+
+      # JavaScript/TypeScript is interpreted — no build step needed.
+      # CodeQL will autobuild by scanning the source tree directly.
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          # Upload results to the Security tab
+          output: sarif-results
+          upload: always

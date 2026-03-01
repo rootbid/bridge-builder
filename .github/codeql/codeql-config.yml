@@ -1,0 +1,23 @@
+name: "Bridge Builder CodeQL Config"
+
+# Use the extended security query suites for maximum coverage
+queries:
+  # Default security queries
+  - uses: security-extended
+  # Additional quality queries (catches code smells, dead code, etc.)
+  - uses: security-and-quality
+
+# Paths to scan — focus on application source code
+paths:
+  - src
+  - convex
+
+# Exclude generated code and dependencies  
+paths-ignore:
+  - node_modules
+  - dist
+  - convex/_generated
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
