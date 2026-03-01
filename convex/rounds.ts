@@ -212,22 +212,8 @@ export const setBridgeTask = internalMutation({
   },
 });
 
-export const completeRound = mutation({
-  args: { roundId: v.id("rounds"), sessionToken: v.string() },
-  handler: async (ctx, args) => {
-    const round = await ctx.db.get(args.roundId);
-    if (!round) throw new Error("Round not found");
-
-    await verifyPartnerOwnership(ctx, round.coupleId, args.sessionToken);
-
-    if (round.status !== "bridging") throw new Error("Cannot complete — bridge tasks are not active");
-
-    await ctx.db.patch(args.roundId, {
-      status: "completed",
-      updatedAt: Date.now(),
-    });
-  },
-});
+// completeRound was removed (M2 security fix): it allowed bypassing the
+// two-partner task completion flow. Use completeBridgeTask instead.
 
 export const completeBridgeTask = mutation({
   args: { roundId: v.id("rounds"), sessionToken: v.string() },

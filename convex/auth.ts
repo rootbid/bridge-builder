@@ -10,9 +10,12 @@ function generateSecureToken(): string {
         .join("");
 }
 
-/** Generate a readable but unique partner ID */
+/** Generate a readable but unique partner ID using crypto-safe randomness */
 function generatePartnerId(): string {
-    return "p_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+    return "p_" + hex + Date.now().toString(36);
 }
 
 /** Create a new secure session and return the opaque token to the client */

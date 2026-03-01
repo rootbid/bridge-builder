@@ -69,11 +69,6 @@ export const RoundView = () => {
     deviceFingerprint ? { fingerprint: deviceFingerprint } : 'skip'
   );
 
-  // Compute device fingerprint on mount
-  useEffect(() => {
-    getDeviceFingerprint().then(setDeviceFingerprint);
-  }, []);
-
   // Pair the machine on mount
   useEffect(() => {
     if (coupleId && partnerRole && !state.matches('waiting') && !state.matches('answering')) {

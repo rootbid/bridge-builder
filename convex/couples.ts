@@ -11,9 +11,11 @@ const MAX_INVITE_CODE_LENGTH = 10;
 
 // --- Helpers ---
 function generateInviteCode(): string {
+    const randomBytes = new Uint8Array(INVITE_CODE_LENGTH);
+    crypto.getRandomValues(randomBytes);
     let code = "";
     for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
-        code += INVITE_CODE_CHARS[Math.floor(Math.random() * INVITE_CODE_CHARS.length)];
+        code += INVITE_CODE_CHARS[randomBytes[i] % INVITE_CODE_CHARS.length];
     }
     return code;
 }
@@ -73,9 +75,16 @@ export const joinCouple = mutation({
 // --- Queries ---
 
 export const getCouple = query({
-    args: { coupleId: v.id("couples") },
+    args: { coupleId: v.id("couples"), sessionToken: v.string() },
     handler: async (ctx, args) => {
-        return await ctx.db.get(args.coupleId);
+        // M3: Verify the caller is a member of this couple
+        const partnerId = await verifySession(ctx, args.sessionToken);
+        const couple = await ctx.db.get(args.coupleId);
+        if (!couple) return null;
+        if (couple.partnerA !== partnerId && couple.partnerB !== partnerId) {
+            return null; // Silently return null instead of throwing to avoid enumeration
+        }
+        return couple;
     },
 });
 
@@ -94,6 +103,13 @@ export const getCoupleByInvite = query({
             return null;
         }
 
-        return couple;
+        if (!couple) return null;
+
+        // M4: Return only safe fields — don't expose partner IDs or internal data
+        return {
+            _id: couple._id,
+            hasPartnerB: !!couple.partnerB,
+            isActive: couple.isActive,
+        };
     },
 });

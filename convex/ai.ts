@@ -10,6 +10,8 @@ const MAX_INPUT_LENGTH = 5000;
 function sanitizeForPrompt(input: string): string {
   // Strip control characters (except newlines and tabs)
   let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  // Escape XML-significant characters to prevent prompt injection via tag breakout
+  sanitized = sanitized.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // Collapse excessive whitespace
   sanitized = sanitized.replace(/\n{3,}/g, "\n\n");
   // Truncate to max length
