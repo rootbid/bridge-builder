@@ -37,7 +37,7 @@ export default defineSchema({
     ),
     bridgeTask: v.optional(
       v.object({
-        observation: v.string(),
+        observation: v.optional(v.string()),
         taskA: v.string(),
         taskB: v.string(),
         insight: v.string(),

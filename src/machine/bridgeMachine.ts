@@ -12,7 +12,7 @@ export interface BridgeContext {
   partnerSubmitted: boolean;
   partnerTyping: boolean;
   bridgeTask: {
-    observation: string;
+    observation?: string;
     taskA: string;
     taskB: string;
     insight: string;
@@ -27,7 +27,7 @@ export type BridgeEvent =
   | { type: 'PARTNER_TYPING'; isTyping: boolean }
   | { type: 'SYNC_STATE'; myAnswer: string | null; partnerSubmitted: boolean; partnerAnswer: string | null; status?: string }
   | { type: 'REVEAL'; partnerAnswer: string }
-  | { type: 'BRIDGE_TASK_READY'; observation: string; taskA: string; taskB: string; insight: string }
+  | { type: 'BRIDGE_TASK_READY'; observation?: string; taskA: string; taskB: string; insight: string }
   | { type: 'COMPLETE' }
   | { type: 'NEW_ROUND' }
   | { type: 'RESET' }

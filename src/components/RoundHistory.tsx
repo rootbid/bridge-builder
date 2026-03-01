@@ -11,7 +11,7 @@ interface Round {
     partnerBAnswer?: string;
     status: string;
     bridgeTask?: {
-        observation: string;
+        observation?: string;
         taskA: string;
         taskB: string;
         insight: string;
@@ -108,13 +108,17 @@ const HistoryCard = ({ round, index, onReCross }: { round: Round; index: number;
                             {/* Bridge Task Details */}
                             {round.bridgeTask && (
                                 <div className="glass-warm rounded-xl p-4 space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <Lightbulb size={12} className="text-hearth-glow" />
-                                        <span className="text-hearth-glow text-[9px] tracking-[0.2em] uppercase">Observation</span>
-                                    </div>
-                                    <p className="text-hearth-paper/70 text-sm leading-relaxed mb-4">
-                                        {round.bridgeTask.observation}
-                                    </p>
+                                    {round.bridgeTask.observation && (
+                                        <>
+                                            <div className="flex items-center gap-2">
+                                                <Lightbulb size={12} className="text-hearth-glow" />
+                                                <span className="text-hearth-glow text-[9px] tracking-[0.2em] uppercase">Observation</span>
+                                            </div>
+                                            <p className="text-hearth-paper/70 text-sm leading-relaxed mb-4">
+                                                {round.bridgeTask.observation}
+                                            </p>
+                                        </>
+                                    )}
 
                                     <div className="space-y-2 pt-2">
                                         <div className="flex gap-2 items-start">

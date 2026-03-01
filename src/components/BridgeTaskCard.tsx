@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { CheckCircle2, Lightbulb, Circle, Clock, Heart, HeartCrack, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BridgeTaskCardProps {
-    observation: string;
+    observation?: string;
     taskA: string;
     taskB: string;
     insight: string;
@@ -98,14 +98,16 @@ export const BridgeTaskCard = ({ observation, taskA, taskB, insight, partnerRole
                     )}
 
                     {/* Observation */}
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-hearth-paper/80 text-sm leading-relaxed border-l-2 border-hearth-clay/30 pl-4"
-                    >
-                        {observation}
-                    </motion.p>
+                    {observation && (
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-hearth-paper/80 text-sm leading-relaxed border-l-2 border-hearth-clay/30 pl-4"
+                        >
+                            {observation}
+                        </motion.p>
+                    )}
 
                     {/* Tasks */}
                     <div className="space-y-4">
